@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mkosi qemu-utils dpkg-dev
+
+      - name: Build CLI
+        working-directory: cli
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/arivon/arivon-os/cli/cmd.arivonVersion=${GITHUB_REF_NAME}" -o ../build/arivon .
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/arivon/arivon-os/cli/cmd.arivonVersion=${GITHUB_REF_NAME}" -o ../build/arivon-arm64 .
+
+      - name: Build installer
+        working-directory: installer
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../build/arivon-installer .
+
+      - name: Build .deb
+        run: |
+          chmod +x packages/build-deb.sh
+          ./packages/build-deb.sh ${GITHUB_REF_NAME} amd64
+          ./packages/build-deb.sh ${GITHUB_REF_NAME} arm64
+
+      - name: Build ISO
+        run: |
+          cd images
+          sudo mkosi build --profile minimal
+          sudo mkosi build --profile server
+          sudo mkosi build --profile docker
+
+      - name: Convert images
+        run: |
+          cd images/output
+          for img in */; do
+            name=$(basename "$img")
+            qemu-img convert -f raw -O qcow2 "$name.raw" "$name.qcow2" 2>/dev/null || true
+          done
+
+      - name: Create checksums
+        run: |
+          cd images/output
+          sha256sum *.deb *.qcow2 */*.qcow2 2>/dev/null > SHA256SUMS || true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            images/output/*.deb
+            images/output/*.qcow2
+            images/output/*/*.qcow2
+            images/output/SHA256SUMS
+          generate_release_notes: true

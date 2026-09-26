@@ -1,0 +1,36 @@
+#!/usr/sbin/nft -f
+# Arivon OS firewall rules
+# Managed by: arivon firewall
+# Do not edit manually.
+
+flush ruleset
+
+table inet arivon {
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        # Allow loopback
+        iif "lo" accept
+
+        # Allow established/related
+        ct state established,related accept
+
+        # Drop invalid
+        ct state invalid drop
+
+        # Allow SSH
+        tcp dport 22 accept
+
+        # Allow ICMP
+        ip protocol icmp accept
+        ip6 nexthdr icmpv6 accept
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+
+    chain output {
+        type filter hook output priority 0; policy accept;
+    }
+}

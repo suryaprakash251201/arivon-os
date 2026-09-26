@@ -1,0 +1,15 @@
+name: network
+description: Arivon Network — Server + network diagnostics
+extends: server
+packages:
+  - nftables
+  - iproute2
+  - dnsutils
+  - tcpdump
+  - traceroute
+  - bridge-utils
+  - vlan
+services:
+  - ssh
+firewall: true
+docker: false

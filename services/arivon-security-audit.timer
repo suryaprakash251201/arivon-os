@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Arivon OS security audit daily
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=300
+AccuracySec=1h
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,17 @@
+name: minimal
+description: Arivon Minimal — kernel, systemd, SSH, networking, APT
+packages:
+  - systemd
+  - linux-image-amd64
+  - openssh-server
+  - apt
+  - sudo
+  - iproute2
+  - ca-certificates
+  - locales
+  - tzdata
+  - arivon-cli
+services:
+  - ssh
+firewall: false
+docker: false

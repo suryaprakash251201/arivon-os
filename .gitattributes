@@ -1,0 +1,22 @@
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.bash text eol=lf
+*.py text eol=lf
+*.go text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.conf text eol=lf
+*.nft text eol=lf
+*.cfg text eol=lf
+*.service text eol=lf
+*.timer text eol=lf
+*.network text eol=lf
+
+*.exe binary
+*.deb binary
+*.iso binary
+*.raw binary
+*.qcow2 binary

@@ -1,0 +1,20 @@
+name: server
+description: Arivon Server — Minimal + common server tools
+extends: minimal
+packages:
+  - curl
+  - wget
+  - vim
+  - nano
+  - tmux
+  - htop
+  - rsync
+  - unzip
+  - iputils-ping
+  - dnsutils
+  - tcpdump
+  - traceroute
+services:
+  - ssh
+firewall: false
+docker: false

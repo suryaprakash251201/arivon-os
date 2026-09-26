@@ -1,0 +1,11 @@
+[Unit]
+Description=Arivon OS Security Audit
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/arivon security audit
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

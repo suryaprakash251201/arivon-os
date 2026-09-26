@@ -1,0 +1,11 @@
+name: docker
+description: Arivon Docker — Server + Docker Engine
+extends: server
+packages:
+  - docker.io
+  - docker-compose
+services:
+  - ssh
+  - docker
+firewall: false
+docker: true

@@ -1,0 +1,10 @@
+[Match]
+Name=en*
+
+[Network]
+DHCP=yes
+
+[DHCPv4]
+RouteMetric=100
+UseDNS=true
+UseDomains=true

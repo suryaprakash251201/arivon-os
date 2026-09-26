@@ -1,0 +1,30 @@
+[system]
+hostname = "arivon"
+timezone = "UTC"
+locale = "en_US.UTF-8"
+
+[network]
+dns = "1.1.1.1, 8.8.8.8"
+
+[ssh]
+port = 22
+permit_root_login = false
+password_auth = false
+max_auth_tries = 3
+max_sessions = 5
+
+[firewall]
+enabled = true
+default_policy = "deny"
+allow_ssh = true
+
+[docker]
+enabled = false
+data_root = "/var/lib/docker"
+
+[logging]
+journal_max_size = "500M"
+journal_max_age = "7d"
+
+[updates]
+auto_security = false

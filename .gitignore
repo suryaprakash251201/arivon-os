@@ -1,0 +1,25 @@
+# Build outputs
+build/arivon
+build/arivon-arm64
+build/deb/
+images/output/
+*.deb
+*.iso
+*.raw
+*.qcow2
+
+# Go
+*.test
+*.out
+coverage.out
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

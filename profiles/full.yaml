@@ -1,0 +1,16 @@
+name: full
+description: Arivon Full — Docker + Network + storage + monitoring
+extends: docker
+packages:
+  - smartmontools
+  - restic
+  - netdata
+  - cockpit
+  - bridge-utils
+  - vlan
+services:
+  - ssh
+  - docker
+  - cockpit.socket
+firewall: true
+docker: true
