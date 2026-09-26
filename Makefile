@@ -1,4 +1,4 @@
-.PHONY: all build test lint clean install deb iso release
+.PHONY: all build test lint clean install deb iso release version
 
 VERSION ?= 0.1.0-dev
 ARCH ?= amd64
@@ -33,3 +33,7 @@ iso:
 
 release:
 	./build/release.sh $(VERSION)
+
+version:
+	@echo "Arivon OS $(VERSION)"
+	@echo "Architecture: $(ARCH)"

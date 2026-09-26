@@ -1,12 +1,14 @@
 # Build outputs
 build/arivon
 build/arivon-arm64
+build/arivon-installer
 build/deb/
 images/output/
 *.deb
 *.iso
 *.raw
 *.qcow2
+*.exe
 
 # Go
 *.test
