@@ -8,65 +8,132 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  release:
+  build:
     name: Build Release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mkosi qemu-utils dpkg-dev
+          cache: true
 
       - name: Build CLI
         working-directory: cli
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/arivon/arivon-os/cli/cmd.arivonVersion=${GITHUB_REF_NAME}" -o ../build/arivon .
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/arivon/arivon-os/cli/cmd.arivonVersion=${GITHUB_REF_NAME}" -o ../build/arivon-arm64 .
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build \
+            -ldflags "-X github.com/arivon/arivon-os/cli/cmd.arivonVersion=${GITHUB_REF_NAME}" \
+            -o ../build/arivon-${{ matrix.arch }} .
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arivon-cli-${{ matrix.arch }}
+          path: build/arivon-${{ matrix.arch }}
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
 
       - name: Build installer
         working-directory: installer
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../build/arivon-installer .
 
-      - name: Build .deb
+      - name: Build .deb packages
         run: |
           chmod +x packages/build-deb.sh
           ./packages/build-deb.sh ${GITHUB_REF_NAME} amd64
           ./packages/build-deb.sh ${GITHUB_REF_NAME} arm64
 
-      - name: Build ISO
+      - name: Upload .deb artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: arivon-debs
+          path: images/output/*.deb
+
+  iso:
+    name: Build ISO
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mkosi qemu-utils dpkg-dev
+
+      - name: Build ISO images
         run: |
           cd images
           sudo mkosi build --profile minimal
           sudo mkosi build --profile server
           sudo mkosi build --profile docker
 
-      - name: Convert images
+      - name: Convert to qcow2
         run: |
           cd images/output
           for img in */; do
             name=$(basename "$img")
-            qemu-img convert -f raw -O qcow2 "$name.raw" "$name.qcow2" 2>/dev/null || true
+            if [ -f "$img/$name.raw" ]; then
+              qemu-img convert -f raw -O qcow2 "$img/$name.raw" "$img/$name.qcow2"
+            fi
           done
+
+      - name: Upload ISO artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: arivon-iso
+          path: images/output/*/
+          if-no-files-found: ignore
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [package, iso]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
 
       - name: Create checksums
         run: |
-          cd images/output
-          sha256sum *.deb *.qcow2 */*.qcow2 2>/dev/null > SHA256SUMS || true
+          cd artifacts
+          sha256sum arivon-cli-* arivon-installer *.deb */*.qcow2 2>/dev/null > SHA256SUMS || true
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            images/output/*.deb
-            images/output/*.qcow2
-            images/output/*/*.qcow2
-            images/output/SHA256SUMS
+            artifacts/arivon-cli-*
+            artifacts/arivon-installer
+            artifacts/*.deb
+            artifacts/*/*.qcow2
+            artifacts/SHA256SUMS
           generate_release_notes: true
