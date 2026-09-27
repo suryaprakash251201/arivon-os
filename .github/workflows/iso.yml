@@ -27,13 +27,13 @@ concurrency:
 
 jobs:
   build-iso:
-    name: Build ISO (${{ matrix.profile }})
+    name: Build image (${{ matrix.profile }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        profile: ${{ inputs.profile == 'all' && fromJSON('["minimal","server","docker","network","full"]') || fromJSON(format('["{0}"]', inputs.profile)) }}
+        profile: ${{ ((inputs.profile == '') || (inputs.profile == 'all')) && fromJSON('["minimal","server","docker","network","full"]') || fromJSON(format('["{0}"]', inputs.profile)) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +45,9 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mkosi qemu-utils dpkg-dev mtools dosfstools
+          sudo apt-get install -y python3-pip systemd-container debootstrap debian-archive-keyring mtools dosfstools qemu-utils dpkg-dev
+          sudo python3 -m pip install --break-system-packages mkosi
+          mkosi --version
 
       - name: Build CLI
         working-directory: cli
@@ -64,29 +66,24 @@ jobs:
           chmod +x packages/build-deb.sh
           ./packages/build-deb.sh 0.1.0-${GITHUB_SHA::7} amd64
 
-      - name: Build ISO
+      - name: Build disk image
         run: |
           cd images
-          sudo mkosi build --profile ${{ matrix.profile }}
+          sudo mkosi --profile=${{ matrix.profile }} -o arivon-os-${{ matrix.profile }} build
 
-      - name: Create ISO
+      - name: Convert to qcow2
         run: |
-          cd images/output/arivon-os-${{ matrix.profile }}
-          genisoimage -o arivon-os-${GITHUB_SHA::7}-${{ matrix.profile }}.iso \
-            -J -R -V "ARIVON_OS" .
+          cd images/output
+          qemu-img convert -f raw -O qcow2 arivon-os-${{ matrix.profile }}.raw arivon-os-${{ matrix.profile }}.qcow2
+          ls -lh arivon-os-${{ matrix.profile }}.*
 
-      - name: Compress ISO
-        run: |
-          cd images/output/arivon-os-${{ matrix.profile }}
-          gzip -k arivon-os-${GITHUB_SHA::7}-${{ matrix.profile }}.iso
-
-      - name: Upload ISO artifact
+      - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: arivon-os-${{ matrix.profile }}-iso
+          name: arivon-os-${{ matrix.profile }}-image
           path: |
-            images/output/arivon-os-${{ matrix.profile }}/*.iso
-            images/output/arivon-os-${{ matrix.profile }}/*.gz
+            images/output/arivon-os-${{ matrix.profile }}.raw
+            images/output/arivon-os-${{ matrix.profile }}.qcow2
           if-no-files-found: error
 
       - name: Create nightly release
@@ -94,13 +91,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly-${{ github.sha }}
-          name: "Nightly ISO Build — ${{ matrix.profile }}"
+          name: "Nightly Image Build — ${{ matrix.profile }}"
           body: |
-            Automated nightly ISO build for profile: ${{ matrix.profile }}
+            Automated nightly disk image build for profile: ${{ matrix.profile }}
             Commit: ${{ github.sha }}
-            Date: ${{ github.event.repository.updated_at }}
+            Bootable GPT disk image (dd to USB or boot in QEMU).
           files: |
-            images/output/arivon-os-${{ matrix.profile }}/*.iso
-            images/output/arivon-os-${{ matrix.profile }}/*.gz
+            images/output/arivon-os-${{ matrix.profile }}.raw
+            images/output/arivon-os-${{ matrix.profile }}.qcow2
           fail_on_unmatched_files: false
           prerelease: true
