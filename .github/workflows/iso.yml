@@ -45,7 +45,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip systemd-container debootstrap debian-archive-keyring mtools dosfstools qemu-utils dpkg-dev
+          sudo apt-get install -y python3-pip systemd-container systemd-boot kmod debootstrap debian-archive-keyring mtools dosfstools qemu-utils dpkg-dev
           sudo python3 -m pip install --break-system-packages git+https://github.com/systemd/mkosi.git@v25
           mkosi --version
 
