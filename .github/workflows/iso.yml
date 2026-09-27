@@ -1,0 +1,106 @@
+name: ISO Build
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Build profile"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - minimal
+          - server
+          - docker
+          - network
+          - full
+
+permissions:
+  contents: write
+
+concurrency:
+  group: iso-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-iso:
+    name: Build ISO (${{ matrix.profile }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ inputs.profile == 'all' && fromJSON('["minimal","server","docker","network","full"]') || fromJSON(format('["{0}"]', inputs.profile)) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mkosi qemu-utils dpkg-dev mtools dosfstools
+
+      - name: Build CLI
+        working-directory: cli
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -ldflags "-X github.com/arivon/arivon-os/cli/cmd.arivonVersion=${GITHUB_SHA::7}" \
+            -o ../build/arivon .
+
+      - name: Build installer
+        working-directory: installer
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../build/arivon-installer .
+
+      - name: Build .deb
+        run: |
+          chmod +x packages/build-deb.sh
+          ./packages/build-deb.sh ${GITHUB_SHA::7} amd64
+
+      - name: Build ISO
+        run: |
+          cd images
+          sudo mkosi build --profile ${{ matrix.profile }}
+
+      - name: Create ISO
+        run: |
+          cd images/output/arivon-os-${{ matrix.profile }}
+          genisoimage -o arivon-os-${GITHUB_SHA::7}-${{ matrix.profile }}.iso \
+            -J -R -V "ARIVON_OS" .
+
+      - name: Compress ISO
+        run: |
+          cd images/output/arivon-os-${{ matrix.profile }}
+          gzip -k arivon-os-${GITHUB_SHA::7}-${{ matrix.profile }}.iso
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arivon-os-${{ matrix.profile }}-iso
+          path: |
+            images/output/arivon-os-${{ matrix.profile }}/*.iso
+            images/output/arivon-os-${{ matrix.profile }}/*.gz
+          if-no-files-found: error
+
+      - name: Create nightly release
+        if: github.event_name == 'schedule'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly-${{ github.sha }}
+          name: "Nightly ISO Build — ${{ matrix.profile }}"
+          body: |
+            Automated nightly ISO build for profile: ${{ matrix.profile }}
+            Commit: ${{ github.sha }}
+            Date: ${{ github.event.repository.updated_at }}
+          files: |
+            images/output/arivon-os-${{ matrix.profile }}/*.iso
+            images/output/arivon-os-${{ matrix.profile }}/*.gz
+          fail_on_unmatched_files: false
+          prerelease: true
