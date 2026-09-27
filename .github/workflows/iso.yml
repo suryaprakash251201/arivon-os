@@ -46,7 +46,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-pip systemd-container debootstrap debian-archive-keyring mtools dosfstools qemu-utils dpkg-dev
-          sudo python3 -m pip install --break-system-packages mkosi
+          sudo python3 -m pip install --break-system-packages git+https://github.com/systemd/mkosi.git@v25
           mkosi --version
 
       - name: Build CLI
