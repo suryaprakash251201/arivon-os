@@ -82,6 +82,7 @@ Full reference: [docs/cli-reference.md](docs/cli-reference.md) ·
 | Guide | Path |
 |---|---|
 | Installation | [docs/installation.md](docs/installation.md) |
+| VirtualBox guide | [docs/virtualbox.md](docs/virtualbox.md) |
 | Getting started | [docs/getting-started.md](docs/getting-started.md) |
 | Architecture | [docs/architecture.md](docs/architecture.md) |
 | Building from source | [docs/building.md](docs/building.md) |
