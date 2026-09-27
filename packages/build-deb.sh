@@ -10,6 +10,7 @@ DEB_DIR="$BUILD_DIR/deb"
 
 echo "Building arivon-cli $VERSION ($ARCH)..."
 
+mkdir -p "$OUTPUT_DIR"
 rm -rf "$DEB_DIR"
 mkdir -p "$DEB_DIR/DEBIAN"
 mkdir -p "$DEB_DIR/usr/bin"
