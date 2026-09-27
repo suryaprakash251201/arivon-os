@@ -51,7 +51,7 @@ jobs:
         working-directory: cli
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-            -ldflags "-X github.com/arivon/arivon-os/cli/cmd.arivonVersion=${GITHUB_SHA::7}" \
+            -ldflags "-X github.com/arivon/arivon-os/cli/cmd.arivonVersion=0.1.0-${GITHUB_SHA::7}" \
             -o ../build/arivon .
 
       - name: Build installer
@@ -62,7 +62,7 @@ jobs:
       - name: Build .deb
         run: |
           chmod +x packages/build-deb.sh
-          ./packages/build-deb.sh ${GITHUB_SHA::7} amd64
+          ./packages/build-deb.sh 0.1.0-${GITHUB_SHA::7} amd64
 
       - name: Build ISO
         run: |
